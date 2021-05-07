@@ -20,35 +20,38 @@ var (
 
 func NewCmdRoot() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "aerospike_viewer",
-		Short: "A cli that gets and displays the result when you specify the key",
+		// Use:           "aerospike_viewer",
+		// Use:           "aerospike_viewer",
+		Short:         "A cli that gets and displays the result when you specify the key",
+		SilenceErrors: true,
+		// SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := parseFlag(cmd); err != nil {
-				cmd.PrintErrln(err)
+				return err
 			}
 			conn, err := aerospike_driver.GetConnection(host, port, nameSpace)
 			if err != nil {
-				cmd.PrintErrln(err)
-				return nil
+				return err
 			}
+			// if err := conn.Put(nameSpace, set, key); err != nil {
+			// 	cmd.PrintErrln(err)
+			// }
 
 			r, err := conn.Get(nameSpace, set, key)
 			if err != nil {
-				cmd.PrintErrln(err)
-				return nil
+				return err
 			}
 
+			// cmd.Println(conn)
+			// cmd.Println(r)
 			jsonStr, err := json.Marshal(r.Bins)
 			if err != nil {
-				cmd.PrintErrln(err)
-				return nil
+				return err
 			}
 
 			var buf bytes.Buffer
 			if err := json.Indent(&buf, []byte(jsonStr), "", "  "); err != nil {
-				cmd.PrintErrln(err)
-				return nil
-
+				return err
 			}
 
 			cmd.Printf("Key: %s\n", r.Key.Value().String())
@@ -59,12 +62,12 @@ func NewCmdRoot() *cobra.Command {
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&host, "host", "192.168.0.1", "Hostname")
+	rootCmd.PersistentFlags().StringVar(&host, "host", "192.168.0.1", "Host")
 	rootCmd.PersistentFlags().IntVar(&port, "port", 3000, "Port")
-	rootCmd.PersistentFlags().StringVar(&nameSpace, "ns", "", "Hostname")
+	rootCmd.PersistentFlags().StringVar(&nameSpace, "ns", "", "Namespace")
 	rootCmd.PersistentFlags().StringVar(&set, "set", "", "Set")
 	rootCmd.PersistentFlags().StringVar(&key, "key", "", "Key")
-	rootCmd.PersistentFlags().StringVar(&encodeType, "enc", "", "EncodeType")
+	rootCmd.PersistentFlags().StringVar(&encodeType, "enc", "", "Encode Type")
 
 	return rootCmd
 }
@@ -74,12 +77,10 @@ func Execute() {
 	cmd.SetOutput(os.Stdout)
 	if err := cmd.Execute(); err != nil {
 		cmd.SetOutput(os.Stderr)
-		cmd.Println(err)
-		os.Exit(1)
+		cmd.PrintErrf("Error: %v", err.Error())
 	}
-}
 
-func init() {}
+}
 
 func parseFlag(cmd *cobra.Command) error {
 	var err error
