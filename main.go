@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "aerospike_viewer/cmd"
+import "github.com/karmanord/aerospike_viewer/cmd"
 
 func main() {
 	cmd.Execute()
