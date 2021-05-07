@@ -11,8 +11,6 @@ A cli that gets and displays the result when you specify the key
 
 ### Output result
 ```
-Key: 123
-Value:
 {
   "bin1": "b1",
   "bin2": "b2"

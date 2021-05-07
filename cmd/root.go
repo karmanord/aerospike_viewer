@@ -54,8 +54,6 @@ func NewCmdRoot() *cobra.Command {
 				return err
 			}
 
-			cmd.Printf("Key: %s\n", r.Key.Value().String())
-			cmd.Println("Value:")
 			cmd.Println(buf.String())
 
 			return nil
