@@ -62,12 +62,12 @@ func NewCmdRoot() *cobra.Command {
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&host, "host", "192.168.0.1", "Host")
+	rootCmd.PersistentFlags().StringVar(&host, "host", "127.0.0.1", "Host")
 	rootCmd.PersistentFlags().IntVar(&port, "port", 3000, "Port")
 	rootCmd.PersistentFlags().StringVar(&nameSpace, "ns", "", "Namespace")
 	rootCmd.PersistentFlags().StringVar(&set, "set", "", "Set")
 	rootCmd.PersistentFlags().StringVar(&key, "key", "", "Key")
-	rootCmd.PersistentFlags().StringVar(&encodeType, "enc", "", "Encode Type")
+	rootCmd.PersistentFlags().StringVar(&encodeType, "enc", "", "Encode Type [msgpack]")
 
 	return rootCmd
 }
