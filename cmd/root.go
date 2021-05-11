@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"reflect"
+	"sort"
 
 	"github.com/karmanord/aerospike_viewer/aerospike_driver"
 	"github.com/spf13/cobra"
@@ -53,15 +55,16 @@ func NewCmdRoot() *cobra.Command {
 			if binFlag {
 				var jsonStr []byte
 				if encodeTypeFlag == MessagePack.String() {
-					if r.Bins["json"] == nil {
-						return errors.New("The Bin of the target record is not json")
+					bins := make(map[string]interface{})
+					for k, v := range r.Bins {
+						if reflect.TypeOf(v).String() == "[]uint8" {
+							bins[k] = aerospike_driver.MessagePackDecode(v.([]byte))
+						} else {
+							bins[k] = v
+						}
 					}
 
-					decodeMap := aerospike_driver.MessagePackDecode(r.Bins["json"].([]byte))
-					bin := map[string]interface{}{
-						"json": decodeMap,
-					}
-					if jsonStr, err = json.Marshal(bin); err != nil {
+					if jsonStr, err = json.Marshal(bins); err != nil {
 						return err
 					}
 				} else {
@@ -76,7 +79,12 @@ func NewCmdRoot() *cobra.Command {
 				}
 				cmd.Println(buf.String())
 			} else if listFlag {
+				names := make([]string, 0, len(r.Bins))
 				for name := range r.Bins {
+					names = append(names, name)
+				}
+				sort.Strings(names)
+				for _, name := range names {
 					cmd.Println(name)
 				}
 			} else {
