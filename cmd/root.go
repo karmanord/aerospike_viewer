@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/aerospike/aerospike-client-go"
 	"github.com/karmanord/aerospike_viewer/aerospike_driver"
 	"github.com/spf13/cobra"
 )
@@ -20,17 +21,28 @@ var (
 	keyFlag        string
 	encodeTypeFlag string
 	binFlag        bool
-	listFlag       bool
+	listFlag       string
 )
 
 type encodeType string
 
 const (
-	MessagePack encodeType = "msgpack"
+	messagePack encodeType = "msgpack"
 )
 
 func (e encodeType) String() string {
 	return string(e)
+}
+
+type listType string
+
+const (
+	listTypeKey listType = "key"
+	listTypeBin listType = "bin"
+)
+
+func (l listType) String() string {
+	return string(l)
 }
 
 func NewCmdRoot() *cobra.Command {
@@ -38,8 +50,8 @@ func NewCmdRoot() *cobra.Command {
 		Short:         "A cli that gets and displays the result when you specify the key",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !binFlag && !listFlag {
-				return errors.New("Specify --bin or -l")
+			if !binFlag && listFlag != listTypeKey.String() && listFlag != listTypeBin.String() {
+				return errors.New("Specify --bin or -l [key, bin]")
 			}
 
 			conn, err := aerospike_driver.NewConnection(hostFlag, portFlag, nameSpaceFlag)
@@ -47,14 +59,14 @@ func NewCmdRoot() *cobra.Command {
 				return err
 			}
 
-			r, err := conn.Get(nameSpaceFlag, setFlag, keyFlag)
-			if err != nil {
-				return err
-			}
-
 			if binFlag {
+				r, err := conn.Get(nameSpaceFlag, setFlag, keyFlag)
+				if err != nil {
+					return err
+				}
+
 				var jsonStr []byte
-				if encodeTypeFlag == MessagePack.String() {
+				if encodeTypeFlag == messagePack.String() {
 					bins := make(map[string]interface{})
 					for k, v := range r.Bins {
 						if reflect.TypeOf(v).String() == "[]uint8" {
@@ -77,16 +89,34 @@ func NewCmdRoot() *cobra.Command {
 				if err := json.Indent(&buf, []byte(jsonStr), "", "  "); err != nil {
 					return err
 				}
+
 				cmd.Println(buf.String())
-			} else if listFlag {
+
+			} else if listFlag == listTypeKey.String() {
+				defaultScanPolicy := aerospike.NewScanPolicy()
+				defaultScanPolicy.MultiPolicy.IncludeBinData = false
+				recordSets, _ := conn.Client.ScanAll(defaultScanPolicy, nameSpaceFlag, setFlag)
+
+				var keys []string
+				for v := range recordSets.Results() {
+					keys = append(keys, v.Record.Key.Value().String())
+				}
+
+				sortedCmdPrintln(cmd, keys)
+
+			} else if listFlag == listTypeBin.String() {
+				r, err := conn.Get(nameSpaceFlag, setFlag, keyFlag)
+				if err != nil {
+					return err
+				}
+
 				names := make([]string, 0, len(r.Bins))
 				for name := range r.Bins {
 					names = append(names, name)
 				}
-				sort.Strings(names)
-				for _, name := range names {
-					cmd.Println(name)
-				}
+
+				sortedCmdPrintln(cmd, names)
+
 			} else {
 				// ここには来ない
 			}
@@ -102,7 +132,7 @@ func NewCmdRoot() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&keyFlag, "key", "", "Key")
 	rootCmd.PersistentFlags().StringVar(&encodeTypeFlag, "enc", "", "Encode Type [msgpack]")
 	rootCmd.PersistentFlags().BoolVar(&binFlag, "bin", false, "Display the value of bin")
-	rootCmd.PersistentFlags().BoolVarP(&listFlag, "list", "l", false, "Show only bin name")
+	rootCmd.PersistentFlags().StringVarP(&listFlag, "list", "l", "", "Show only bin name")
 
 	return rootCmd
 }
@@ -113,5 +143,12 @@ func Execute() {
 	if err := cmd.Execute(); err != nil {
 		cmd.SetOutput(os.Stderr)
 		cmd.PrintErrf("Error: %v", err.Error())
+	}
+}
+
+func sortedCmdPrintln(cmd *cobra.Command, sliceString []string) {
+	sort.Strings(sliceString)
+	for _, s := range sliceString {
+		cmd.Println(s)
 	}
 }

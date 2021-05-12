@@ -17,12 +17,21 @@ A cli that gets and displays the result when you specify the key
 }
 ```
 
-`ex. $ aerospike_viewer --host 127.0.0.1 --ns test --set set1 --key 111 -l`
+`ex. $ aerospike_viewer --host 127.0.0.1 --ns test --set set1 --key 111 -l bin`
 
 ### Output result(Bin Name Only)
 ```
 bin1
 bin2
+```
+
+`ex. $ aerospike_viewer --host 127.0.0.1 --ns test --set set1 -l key`
+
+### Output result(Key List)
+```
+111
+222
+333
 ```
 
 `ex. $ aerospike_viewer --host 127.0.0.1 --ns test --set set1 --key 222 --bin`
