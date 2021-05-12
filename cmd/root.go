@@ -21,7 +21,8 @@ var (
 	keyFlag        string
 	encodeTypeFlag string
 	binFlag        bool
-	listFlag       string
+	listKeysFlag   bool
+	listBinsFlag   bool
 )
 
 type encodeType string
@@ -34,24 +35,13 @@ func (e encodeType) String() string {
 	return string(e)
 }
 
-type listType string
-
-const (
-	listTypeKey listType = "key"
-	listTypeBin listType = "bin"
-)
-
-func (l listType) String() string {
-	return string(l)
-}
-
 func NewCmdRoot() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Short:         "A cli that gets and displays the result when you specify the key",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !binFlag && listFlag != listTypeKey.String() && listFlag != listTypeBin.String() {
-				return errors.New("Specify --bin or -l [key, bin]")
+			if !binFlag && !listBinsFlag && !listKeysFlag {
+				return errors.New("Specify --bin or --list-keys or --list-bins ")
 			}
 
 			conn, err := aerospike_driver.NewConnection(hostFlag, portFlag, nameSpaceFlag)
@@ -59,7 +49,8 @@ func NewCmdRoot() *cobra.Command {
 				return err
 			}
 
-			if binFlag {
+			switch {
+			case binFlag:
 				r, err := conn.Get(nameSpaceFlag, setFlag, keyFlag)
 				if err != nil {
 					return err
@@ -92,7 +83,7 @@ func NewCmdRoot() *cobra.Command {
 
 				cmd.Println(buf.String())
 
-			} else if listFlag == listTypeKey.String() {
+			case listKeysFlag:
 				defaultScanPolicy := aerospike.NewScanPolicy()
 				defaultScanPolicy.MultiPolicy.IncludeBinData = false
 				recordSets, _ := conn.Client.ScanAll(defaultScanPolicy, nameSpaceFlag, setFlag)
@@ -104,7 +95,7 @@ func NewCmdRoot() *cobra.Command {
 
 				sortedCmdPrintln(cmd, keys)
 
-			} else if listFlag == listTypeBin.String() {
+			case listBinsFlag:
 				r, err := conn.Get(nameSpaceFlag, setFlag, keyFlag)
 				if err != nil {
 					return err
@@ -117,7 +108,7 @@ func NewCmdRoot() *cobra.Command {
 
 				sortedCmdPrintln(cmd, names)
 
-			} else {
+			default:
 				// ここには来ない
 			}
 
@@ -132,7 +123,8 @@ func NewCmdRoot() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&keyFlag, "key", "", "Key")
 	rootCmd.PersistentFlags().StringVar(&encodeTypeFlag, "enc", "", "Encode Type [msgpack]")
 	rootCmd.PersistentFlags().BoolVar(&binFlag, "bin", false, "Display the value of bin")
-	rootCmd.PersistentFlags().StringVarP(&listFlag, "list", "l", "", "Show only bin name")
+	rootCmd.PersistentFlags().BoolVar(&listBinsFlag, "list-bins", false, "Display only bin name")
+	rootCmd.PersistentFlags().BoolVar(&listKeysFlag, "list-keys", false, "Display Key List")
 
 	return rootCmd
 }
