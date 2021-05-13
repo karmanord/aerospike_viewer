@@ -2,9 +2,8 @@
 A cli that gets and displays the result when you specify the key
 
 ## Installation
-`$ go get -u https://github.com/karmanord/aerospike_viewer`
+`$ go get -u github.com/karmanord/aerospike_viewer`
 
-`$ go install`
 ## Usage
 
 `ex. $ aerospike_viewer --host 127.0.0.1 --ns test --set set1 --key 111 --bin`
