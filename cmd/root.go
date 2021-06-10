@@ -90,6 +90,9 @@ func NewCmdRoot() *cobra.Command {
 
 				var keys []string
 				for v := range recordSets.Results() {
+					if v.Record.Key.Value() == nil {
+						return errors.New("Cannot be obtained because the key is hashed")
+					}
 					keys = append(keys, v.Record.Key.Value().String())
 				}
 
