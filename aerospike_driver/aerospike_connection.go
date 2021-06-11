@@ -1,6 +1,7 @@
 package aerospike_driver
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/aerospike/aerospike-client-go"
@@ -29,12 +30,48 @@ func NewConnection(host string, port int, ns string) (*Connection, error) {
 }
 
 func (conn *Connection) Get(nameSpace, setName, key string) (*as.Record, error) {
-	asKey, err := as.NewKey(nameSpace, setName, key)
+	asKeys, err := convertKey(nameSpace, setName, key)
 	if err != nil {
 		return nil, err
 	}
 
-	return conn.Client.Get(nil, asKey)
+	var res *as.Record
+	for _, asKey := range asKeys {
+		res, err = conn.Client.Get(nil, asKey)
+		if res != nil {
+			return res, nil
+		}
+	}
+	return nil, err
+}
+
+func convertKey(nameSpace, setName, key string) ([]*as.Key, error) {
+	askeys := make([]*as.Key, 0, 3)
+	if asKey, err := as.NewKey(nameSpace, setName, key); err != nil {
+		return nil, err
+	} else {
+		askeys = append(askeys, asKey)
+	}
+
+	intKey, err := strconv.Atoi(key)
+	if err == nil {
+		if asKey, err := as.NewKey(nameSpace, setName, intKey); err != nil {
+			return nil, err
+		} else {
+			askeys = append(askeys, asKey)
+		}
+	}
+
+	floatKey, err := strconv.ParseFloat(key, 64)
+	if err == nil {
+		if asKey, err := as.NewKey(nameSpace, setName, floatKey); err != nil {
+			return nil, err
+		} else {
+			askeys = append(askeys, asKey)
+		}
+	}
+
+	return askeys, nil
 }
 
 func MessagePackDecode(data []byte) map[string]interface{} {
